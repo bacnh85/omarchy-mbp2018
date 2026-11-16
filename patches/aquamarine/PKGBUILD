@@ -1,0 +1,57 @@
+# Maintainer: Caleb Maclennan <caleb@alerque.com>
+# Contributor: Aaron Blasko <blaskoazzolaaaron [at] gmail.com>
+#
+# Forked locally: 0.15.1 + the multi-GPU modifier-type fix, so it drops in for the
+# installed Hyprland 0.56.2 (SOVERSION 14). Building 0.16.0 instead would bump
+# SOVERSION to 15 and Hyprland would need rebuilding too.
+
+pkgname=aquamarine
+pkgver=0.15.1
+pkgrel=1.1
+pkgdesc='a very light linux rendering backend library (patched: multi-GPU Polaris fix)'
+arch=(x86_64 aarch64)
+url="https://github.com/hyprwm/$pkgname"
+license=(BSD-3-Clause)
+depends=(libgcc
+         libstdc++
+         glibc # libc.so libm.so
+         hyprutils libhyprutils.so
+         libdisplay-info libdisplay-info.so
+         libdrm # libdrm.so
+         libglvnd libEGL.so
+         libinput # libinput.so
+         mesa # libgbm.so
+         opengl-driver
+         pixman
+         seatd libseat.so
+         systemd-libs libudev.so
+         wayland libwayland-client.so
+         wayland-protocols)
+makedepends=(cmake
+             hyprwayland-scanner)
+provides=("lib$pkgname.so=14-64")
+conflicts=(aquamarine)
+_archive="$pkgname-$pkgver"
+source=("$url/archive/v$pkgver/$_archive.tar.gz"
+        "multi-gpu-modifier-type.patch")
+sha256sums=('SKIP'
+            'SKIP')
+
+prepare() {
+	cd "$_archive"
+	patch -p1 -i "$srcdir/multi-gpu-modifier-type.patch"
+}
+
+build() {
+	cd "$_archive"
+	cmake -B build \
+		-D CMAKE_INSTALL_PREFIX=/usr \
+		-D CMAKE_BUILD_TYPE=Release
+	cmake --build build
+}
+
+package() {
+	cd "$_archive"
+	DESTDIR="$pkgdir" cmake --install build
+	install -Dm0644 -t "$pkgdir/usr/share/licenses/$pkgname" LICENSE
+}

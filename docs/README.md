@@ -7,6 +7,7 @@ to verify it. Read the one matching the symptom.
 - [02 — Wi-Fi / Bluetooth](02-wifi-bluetooth.md)
 - [03 — Trackpad scroll direction](03-trackpad-scroll.md)
 - [04 — The AMD dGPU: does it work, on-demand use, battery](04-dgpu-power.md)
+- [05 — External monitor over USB-C/DP detected but black](05-external-monitor-black.md)
 
 ## Machine facts worth knowing before debugging anything
 

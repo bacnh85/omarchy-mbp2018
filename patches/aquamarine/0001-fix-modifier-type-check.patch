@@ -1,0 +1,31 @@
+Fix multi-GPU scanout on GPUs without KMS modifiers (AMD Polaris / MacBookPro15,1 dGPU).
+
+`verifyDestinationDMABUF` compared the buffer's *modifier* against
+`DRM_FORMAT_INVALID` (0) instead of `DRM_FORMAT_MOD_INVALID` (0x00ffffffffffffff).
+Since `initDRMFormats()` always appends `(DRM_FORMAT_MOD_INVALID, external = true)`
+("EGL can always do implicit modifiers"), a destination buffer with an implicit
+modifier matched that entry and was rejected as "external-only" -- the exact
+opposite of the intent of hyprwm/aquamarine#143.
+
+It only bites GPUs that cannot advertise KMS modifiers: amdgpu sets
+supportsAddFb2Modifiers only on GFX9+, so a Polaris scanout swapchain is allocated
+modifier-less (modifier INVALID) and every cross-GPU blit to it is refused.
+Symptom: monitor detected with a valid EDID and a workspace assigned, but black,
+with an endless "Backend requires blit, but blit failed" retry loop in hyprland.log.
+
+Already fixed upstream on main (present in v0.16.0); this backports it to 0.15.1 so
+the fix drops in for Hyprland 0.56.2 without a SOVERSION 14 -> 15 relink.
+
+Upstream: https://github.com/hyprwm/aquamarine/issues/220
+
+--- a/src/backend/drm/Renderer.cpp
++++ b/src/backend/drm/Renderer.cpp
+@@ -1120,7 +1120,7 @@ bool CDRMRenderer::verifyDestinationDMABUF(const SDMABUFAttrs& attrs) {
+         if (fmt.modifier != attrs.modifier)
+             continue;
+ 
+-        if (fmt.modifier != DRM_FORMAT_INVALID && fmt.external) {
++        if (fmt.modifier != DRM_FORMAT_MOD_INVALID && fmt.external) {
+             backend->log(AQ_LOG_ERROR, "EGL (verifyDestinationDMABUF): FAIL, format is external-only");
+             return false;
+         }

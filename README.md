@@ -11,6 +11,7 @@ Three problems were fixed on this box. Each one had a distinct root cause; none 
 | 2 | No Wi-Fi; Bluetooth appeared broken | BCM4364 firmware (`brcmfmac4364b2-pcie.apple,*`) is **not** in `linux-firmware`; it must be harvested from a macOS image | `scripts/fix-wifi-firmware.sh` |
 | 3 | Trackpad two-finger scroll direction "wrong" (traditional instead of macOS-style) | Omarchy ships `touchpad.natural_scroll = false` | `config/hypr/input.lua` |
 | 4 | dGPU runs from boot and burns ~7.4 W idle, but cannot be toggled at runtime | Polaris has no `amdgpu` runtime PM (no `_PR3` on `\_SB_.PCI0.PEG0.GFX0`) | `scripts/fix-dgpu-power.sh off` + reboot |
+| 5 | USB-C/DP monitor detected (EDID, mode, workspace) but shows no picture | `aquamarine` 0.15.1 compares a buffer *modifier* against `DRM_FORMAT_INVALID` (0) instead of `DRM_FORMAT_MOD_INVALID`, so every cross-GPU blit to Polaris is rejected as "external-only" and the atomic commit never lands | `scripts/fix-external-monitor.sh` |
 
 Details: [`docs/`](docs/README.md) · Patches and upstream status: [`patches/`](patches/README.md).
 
@@ -23,6 +24,7 @@ After reinstalling Omarchy, run in this order:
 ./scripts/fix-wifi-firmware.sh        # Wi-Fi up immediately, no reboot
 ./scripts/fix-trackpad-scroll.sh      # instant, hyprctl reload
 ./scripts/fix-dgpu-power.sh off       # then reboot — dGPU off, best battery
+./scripts/fix-external-monitor.sh     # external monitor; re-run after aquamarine upgrades
 ```
 
 `fix-wifi-firmware.sh` prefers a saved tarball at
