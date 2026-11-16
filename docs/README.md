@@ -8,6 +8,9 @@ to verify it. Read the one matching the symptom.
 - [03 — Trackpad scroll direction](03-trackpad-scroll.md)
 - [04 — The AMD dGPU: does it work, on-demand use, battery](04-dgpu-power.md)
 - [05 — External monitor over USB-C/DP detected but black](05-external-monitor-black.md)
+- [06 — Suspend hangs: panel dark but the machine never sleeps](06-suspend-hang.md)
+- [07 — Brightness not restored after a reboot](07-brightness-persist.md)
+- [08 — Battery charge limit (stop at 80%)](08-battery-charge-limit.md)
 
 ## Machine facts worth knowing before debugging anything
 
