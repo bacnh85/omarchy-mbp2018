@@ -11,7 +11,7 @@ Three problems were fixed on this box. Each one had a distinct root cause; none 
 | 2 | No Wi-Fi; Bluetooth appeared broken | BCM4364 firmware (`brcmfmac4364b2-pcie.apple,*`) is **not** in `linux-firmware`; it must be harvested from a macOS image | `scripts/fix-wifi-firmware.sh` |
 | 3 | Trackpad two-finger scroll direction "wrong" (traditional instead of macOS-style) | Omarchy ships `touchpad.natural_scroll = false` | `config/hypr/input.lua` |
 
-Details: [`docs/`](docs/README.md).
+Details: [`docs/`](docs/README.md) · Patches and upstream status: [`patches/`](patches/README.md).
 
 ## Rebuilding this machine from scratch
 
