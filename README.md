@@ -10,6 +10,7 @@ Three problems were fixed on this box. Each one had a distinct root cause; none 
 | 1 | Built-in keyboard dead before login (needed a USB keyboard for the LUKS passphrase) | `/etc/mkinitcpio.conf.d/zz-omarchy-kernel-modules.conf` stripped `t2bce_vhci` from `MODULES` **unconditionally**, so the linux-t2 initramfs contained no T2 keyboard driver | `scripts/fix-initramfs-keyboard.sh` |
 | 2 | No Wi-Fi; Bluetooth appeared broken | BCM4364 firmware (`brcmfmac4364b2-pcie.apple,*`) is **not** in `linux-firmware`; it must be harvested from a macOS image | `scripts/fix-wifi-firmware.sh` |
 | 3 | Trackpad two-finger scroll direction "wrong" (traditional instead of macOS-style) | Omarchy ships `touchpad.natural_scroll = false` | `config/hypr/input.lua` |
+| 4 | dGPU runs from boot and burns ~7.4 W idle, but cannot be toggled at runtime | Polaris has no `amdgpu` runtime PM (no `_PR3` on `\_SB_.PCI0.PEG0.GFX0`) | `scripts/fix-dgpu-power.sh off` + reboot |
 
 Details: [`docs/`](docs/README.md) · Patches and upstream status: [`patches/`](patches/README.md).
 
@@ -21,6 +22,7 @@ After reinstalling Omarchy, run in this order:
 ./scripts/fix-initramfs-keyboard.sh   # then reboot — keyboard works at the LUKS prompt
 ./scripts/fix-wifi-firmware.sh        # Wi-Fi up immediately, no reboot
 ./scripts/fix-trackpad-scroll.sh      # instant, hyprctl reload
+./scripts/fix-dgpu-power.sh off       # then reboot — dGPU off, best battery
 ```
 
 `fix-wifi-firmware.sh` prefers a saved tarball at

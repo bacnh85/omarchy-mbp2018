@@ -6,6 +6,7 @@ to verify it. Read the one matching the symptom.
 - [01 — Built-in keyboard dead before login](01-keyboard-before-login.md)
 - [02 — Wi-Fi / Bluetooth](02-wifi-bluetooth.md)
 - [03 — Trackpad scroll direction](03-trackpad-scroll.md)
+- [04 — The AMD dGPU: does it work, on-demand use, battery](04-dgpu-power.md)
 
 ## Machine facts worth knowing before debugging anything
 
@@ -17,6 +18,8 @@ Disk            nvme0n1p2 = LUKS -> btrfs. Single boot, **no APFS / no macOS**
 Wi-Fi          Broadcom BCM4364 [14e4:4464] -> brcmfmac (never broadcom-wl)
 Bluetooth      BCM4364B0 over hci_uart/btbcm on serial0 (ACPI BCM2E7C)
 Keyboard/trackpad, Touch Bar   internal USB devices via t2bce_vhci (T2 PCIe)
+GPUs           iGPU Intel UHD 630 (eDP-1) + dGPU AMD Baffin 555X/560X [1002:67ef]
+               dGPU has **no runtime PM** on Polaris — on from boot or off until reboot
 ```
 
 Two traps that cost time:
