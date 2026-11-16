@@ -155,8 +155,9 @@ pkexec rtcwake -m mem -s 20
   machines is the variant known to come back with a dead Touch Bar. The blacklist fixes
   the actual cause, so `deep` stays.
 - **`applesmc` is not what the fans use.** Fan readings come from `macsmc-hwmon`
-  (`fan1_input`/`fan2_input`, ~2700 rpm at idle). Blacklisting `applesmc` does not
-  affect them, or anything else on the SMC.
+  (`fan1_input`/`fan2_input`) and the SMC's own curve drives them. Blacklisting
+  `applesmc` affects neither — see [09](09-fan-daemon.md) for the fan daemon, which is
+  broken for an unrelated reason.
 - **`pm_async=off` is already set** in `/etc/limine-entry-tool.d/t2-mac.conf` (t2linux
   requirement). Do not remove it while chasing suspend problems.
 - If suspend still fails after this fix, `pm_test=devices` narrows it to a device rather

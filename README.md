@@ -2,11 +2,12 @@
 
 Machine: `MBPSori` · MacBookPro15,1 · Apple T2 (iBridge 24.16.6005.0.0) · Omarchy (Arch), kernel `linux-t2`.
 
-Eight problems were fixed on this box. Each one had a distinct root cause; none were
+Nine problems were fixed on this box. Each one had a distinct root cause; none were
 "Omarchy bugs" in the usual sense — three were config gaps, one was a genuine installer
 bug, one was a driver claiming hardware it cannot drive on this machine, one was a
-kernel driver leaving a task unfreezable, one was a missing setting, and one was a
-save that only ever ran at a clean shutdown.
+kernel driver leaving a task unfreezable, one was a missing setting, one was a save that
+only ever ran at a clean shutdown, and one was a third-party daemon chasing an interface
+that no longer exists.
 
 | # | Symptom | Root cause | Fix |
 |---|---------|-----------|-----|
@@ -18,6 +19,7 @@ save that only ever ran at a clean shutdown.
 | 6 | Suspend hangs: panel goes dark but the machine never sleeps, then needs a long power-button press | `applesmc` (the pre-T2 SMC driver) claims the `APP0001` ACPI id that `macsmc-acpi` owns; its probe spins in `smc_sane()` for 60 s in D state, and a D-state task cannot be frozen, so `pm-suspend` aborts after 20 s | `scripts/fix-suspend-hang.sh` |
 | 7 | Brightness comes back at the firmware default after a reboot | `systemd-backlight@.service` only saves in `ExecStop`, so any non-clean shutdown loses the level — and #6 was forcing exactly those | `scripts/fix-brightness-persist.sh` |
 | 8 | No way to stop charging below 100%, to slow battery ageing | Not a bug: the driver exposes `charge_control_end_threshold`, but nothing was setting it (and there is no *start* threshold on this kernel) | `scripts/fix-battery-charge-limit.sh 80` |
+| 9 | `t2fanrd` never starts — "Fan not found" every 2 s, 8800+ restarts a boot | The daemon globs `/sys/devices/pci*/*/*/*/APP0001:00/fan*`, but `macsmc-hwmon` publishes the fans under `.../APP0001:00/macsmc-hwmon/hwmon/hwmon4/`; known upstream gap (T2FanRD #21/#22) | `scripts/fix-fan-daemon.sh` |
 
 Details: [`docs/`](docs/README.md) · Patches and upstream status: [`patches/`](patches/README.md).
 
@@ -35,6 +37,7 @@ After reinstalling Omarchy, run in this order:
 ./scripts/fix-suspend-hang.sh --test  # proves it without entering S3
 ./scripts/fix-brightness-persist.sh   # instant — brightness survives any shutdown
 ./scripts/fix-battery-charge-limit.sh 80   # instant, and re-applied at boot
+./scripts/fix-fan-daemon.sh           # instant — stops t2fanrd's restart loop
 ```
 
 `fix-wifi-firmware.sh` prefers a saved tarball at

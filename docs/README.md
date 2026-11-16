@@ -11,6 +11,7 @@ to verify it. Read the one matching the symptom.
 - [06 — Suspend hangs: panel dark but the machine never sleeps](06-suspend-hang.md)
 - [07 — Brightness not restored after a reboot](07-brightness-persist.md)
 - [08 — Battery charge limit (stop at 80%)](08-battery-charge-limit.md)
+- [09 — t2fanrd restarts forever ("Fan not found")](09-fan-daemon.md)
 
 ## Machine facts worth knowing before debugging anything
 
