@@ -1,0 +1,15 @@
+# Written by the Omarchy installer. t2bce_vhci comes from linux-t2 and does not
+# exist in linux-omarchy, and mkinitcpio fails on a module it cannot find — so
+# strip it, but only for a kernel that really lacks it. Stripping it
+# unconditionally left the internal T2 keyboard out of the linux-t2 initramfs,
+# so the LUKS passphrase prompt took no keys and needed an external keyboard.
+_omarchy_kept=()
+for _omarchy_module in "${MODULES[@]}"; do
+  if [[ $_omarchy_module == "t2bce_vhci" ]] &&
+    [[ $(modinfo -k "${KERNELVERSION:-$(uname -r)}" -F filename t2bce_vhci 2>/dev/null) != /* ]]; then
+    continue
+  fi
+  _omarchy_kept+=("$_omarchy_module")
+done
+MODULES=("${_omarchy_kept[@]}")
+unset _omarchy_kept _omarchy_module

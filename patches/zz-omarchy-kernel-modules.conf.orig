@@ -1,0 +1,9 @@
+# Written by the Omarchy installer. The installed kernel has no such
+# modules, and mkinitcpio fails on a module it cannot find.
+_omarchy_absent=(t2bce_vhci)
+_omarchy_kept=()
+for _omarchy_module in "${MODULES[@]}"; do
+  [[ " ${_omarchy_absent[*]} " == *" $_omarchy_module "* ]] || _omarchy_kept+=("$_omarchy_module")
+done
+MODULES=("${_omarchy_kept[@]}")
+unset _omarchy_absent _omarchy_kept _omarchy_module
