@@ -12,6 +12,8 @@ to verify it. Read the one matching the symptom.
 - [07 — Brightness not restored after a reboot](07-brightness-persist.md)
 - [08 — Battery charge limit (stop at 80%)](08-battery-charge-limit.md)
 - [09 — t2fanrd restarts forever ("Fan not found")](09-fan-daemon.md)
+- [10 — Opening the lid does not wake the machine](10-lid-wake.md)
+- [11 — `omarchy update` downgrades the kernel and takes macsmc with it](11-kernel-downgrade-macsmc.md)
 
 ## Machine facts worth knowing before debugging anything
 
@@ -48,3 +50,13 @@ Two traps that cost time:
 `pkexec <cmd> </dev/null` — it authenticates via the polkit agent (slow, ~4 s, but
 works non-interactively once authorised). A password prompt is required the first
 time; after that polkit caches it briefly.
+
+Two consequences worth remembering, both of which have bitten here:
+
+1. **`pkexec` chdirs to `/root`** and reformats its environment. Any relative path
+   ("`build/foo.so`", "`linux-t2-7.3.4.pkg.tar.zst`") becomes *cannot stat* / *could not
+   find or read package*. Always pass absolute paths to `pkexec`.
+2. **It hangs rather than failing when there is no TTY** — polkit needs somewhere to
+   prompt. Inside `omarchy update` there is a cached `sudo`, so scripts resolve root as
+   *root → `sudo -n` → `pkexec`* (`scripts/*.sh: as_root()`); prefer that order in
+   anything a hook may call.

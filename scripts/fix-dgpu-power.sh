@@ -21,7 +21,15 @@ set -euo pipefail
 UNIT=/etc/systemd/system/amdgpu-off.service
 MODE=${1:-status}
 
-as_root() { pkexec "$@" </dev/null; }
+# omarchy update runs its hooks under the update's own sudo authorization, where
+# pkexec would prompt again (and polkit with no TTY simply hangs). Prefer a sudo
+# that already works, then pkexec for an interactive shell.
+as_root() {
+  if ((EUID == 0)); then "$@"
+  elif sudo -n true 2>/dev/null; then sudo -n "$@"
+  else pkexec "$@" </dev/null
+  fi
+}
 
 write_unit() {
   cat <<'EOF' > /tmp/amdgpu-off.service

@@ -49,7 +49,15 @@ set -euo pipefail
 UNIT=t2fanrd.service
 MODE=${1:-apply}
 
-as_root() { pkexec "$@" </dev/null; }
+# omarchy update runs its hooks under the update's own sudo authorization, where
+# pkexec would prompt again (and polkit with no TTY simply hangs). Prefer a sudo
+# that already works, then pkexec for an interactive shell.
+as_root() {
+  if ((EUID == 0)); then "$@"
+  elif sudo -n true 2>/dev/null; then sudo -n "$@"
+  else pkexec "$@" </dev/null
+  fi
+}
 
 # `systemctl is-enabled` prints "masked" but exits 1 for a masked unit, so under
 # `pipefail` a `... | grep -qx masked` test is always false. Capture the string

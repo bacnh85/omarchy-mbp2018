@@ -56,7 +56,15 @@ set -euo pipefail
 BLACKLIST=/etc/modprobe.d/blacklist-applesmc.conf
 MODE=${1:-apply}
 
-as_root() { pkexec "$@" </dev/null; }
+# omarchy update runs its hooks under the update's own sudo authorization, where
+# pkexec would prompt again (and polkit with no TTY simply hangs). Prefer a sudo
+# that already works, then pkexec for an interactive shell.
+as_root() {
+  if ((EUID == 0)); then "$@"
+  elif sudo -n true 2>/dev/null; then sudo -n "$@"
+  else pkexec "$@" </dev/null
+  fi
+}
 # Root installs only what this script itself wrote: mktemp gives an unpredictable
 # name this user owns, so a pre-created symlink in /tmp cannot redirect the copy
 # (a `>` onto a symlink would let another local user choose what root installs).

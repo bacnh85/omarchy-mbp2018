@@ -2,12 +2,13 @@
 
 Machine: `MBPSori` · MacBookPro15,1 · Apple T2 (iBridge 24.16.6005.0.0) · Omarchy (Arch), kernel `linux-t2`.
 
-Nine problems were fixed on this box. Each one had a distinct root cause; none were
+Eleven problems were fixed on this box. Each one had a distinct root cause; none were
 "Omarchy bugs" in the usual sense — three were config gaps, one was a genuine installer
 bug, one was a driver claiming hardware it cannot drive on this machine, one was a
 kernel driver leaving a task unfreezable, one was a missing setting, one was a save that
-only ever ran at a clean shutdown, and one was a third-party daemon chasing an interface
-that no longer exists.
+only ever ran at a clean shutdown, one was a third-party daemon chasing an interface
+that no longer exists, one was a wake source the firmware needs and the kernel leaves
+off, and one was a repository shipping an older kernel under a newer epoch.
 
 | # | Symptom | Root cause | Fix |
 |---|---------|-----------|-----|
@@ -20,8 +21,36 @@ that no longer exists.
 | 7 | Brightness comes back at the firmware default after a reboot | `systemd-backlight@.service` only saves in `ExecStop`, so any non-clean shutdown loses the level — and #6 was forcing exactly those | `scripts/fix-brightness-persist.sh` |
 | 8 | No way to stop charging below 100%, to slow battery ageing | Not a bug: the driver exposes `charge_control_end_threshold`, but nothing was setting it (and there is no *start* threshold on this kernel) | `scripts/fix-battery-charge-limit.sh 80` |
 | 9 | `t2fanrd` never starts — "Fan not found" every 2 s, 8800+ restarts a boot | The daemon globs `/sys/devices/pci*/*/*/*/APP0001:00/fan*`, but `macsmc-hwmon` publishes the fans under `.../APP0001:00/macsmc-hwmon/hwmon/hwmon4/`; known upstream gap (T2FanRD #21/#22) | `scripts/fix-fan-daemon.sh` |
+| 10 | Lid close sleeps, lid open does not wake — the power button has to be pressed first | S3 arms only the GPEs a *wakeup-enabled* `_PRW` device claims. The lid rides the **EC's** GPE (`gpe6E`), not LID0's own (`gpe6F`, 0 events), and `EC` was `*disabled`, so that GPE was cleared at S3 entry | `scripts/fix-lid-wake.sh` |
+| 11 | After `omarchy update`, the battery charge limit and fan sensors silently stop existing | Omarchy's repo ships `linux-t2` at `1:7.2.15.arch1-1` (epoch 1) built **without** `CONFIG_MACSMC_*` — 0 of 9 `macsmc` modules. arch-mact2's `7.3.4` has all 9 but no epoch, so `pacman -Syu` treats the older code as the newer package and "upgrades" into it (`vercmp 1:7.2.15 7.3.4` → `1`) | `IgnorePkg` hold + `scripts/omarchy-hook-hooks/` |
 
 Details: [`docs/`](docs/README.md) · Patches and upstream status: [`patches/`](patches/README.md).
+
+## Surviving `omarchy update`
+
+An update is the one event that can silently undo the fixes above, so two hooks are
+installed into `~/.config/omarchy/hooks/`:
+
+| Hook | When | What it does |
+|---|---|---|
+| `pre-refresh-pacman.d/keep-linux-t2-held.sh` | after `omarchy refresh pacman` rewrites `pacman.conf`, before the transaction | re-applies the `IgnorePkg` hold that the rewrite drops |
+| `post-update.d/verify-mbp-fixes.sh` | end of `omarchy update` | checks all eleven fixes; rebuilds aquamarine when a package upgrade restored the buggy `.so`; repairs a lost `IgnorePkg` |
+
+```bash
+omarchy hook install pre-refresh-pacman ./scripts/omarchy-hook-hooks/keep-linux-t2-held.sh
+omarchy hook install post-update       ./scripts/omarchy-hook-hooks/verify-mbp-fixes.sh
+omarchy-hook post-update    # run it by hand any time
+```
+
+The hold is visible to pacman, so an update reports the kernel as `[ignored]` rather
+than downgrading it:
+
+```bash
+$ pacman -Qu linux-t2
+linux-t2 7.3.4.arch1-2 -> 1:7.2.15.arch1-1 [ignored]
+```
+
+Everything else here is idempotent, so re-running a script is always safe.
 
 ## Rebuilding this machine from scratch
 
@@ -38,6 +67,15 @@ After reinstalling Omarchy, run in this order:
 ./scripts/fix-brightness-persist.sh   # instant — brightness survives any shutdown
 ./scripts/fix-battery-charge-limit.sh 80   # instant, and re-applied at boot
 ./scripts/fix-fan-daemon.sh           # instant — stops t2fanrd's restart loop
+./scripts/fix-lid-wake.sh             # instant — opening the lid wakes the machine
+```
+
+Then install the two update hooks so the next `omarchy update` cannot undo any of it:
+
+```bash
+omarchy hook install pre-refresh-pacman ./scripts/omarchy-hook-hooks/keep-linux-t2-held.sh
+omarchy hook install post-update       ./scripts/omarchy-hook-hooks/verify-mbp-fixes.sh
+omarchy-hook post-update               # expect: all machine fixes intact
 ```
 
 `fix-wifi-firmware.sh` prefers a saved tarball at

@@ -46,7 +46,15 @@ BUILDDIR=$SRCDIR/aquamarine-$PKGVER
 LOCALPREFIX=$SRCDIR/local
 HERE=$(cd "$(dirname "$0")" && pwd)
 
-as_root() { pkexec "$@" </dev/null; }
+# omarchy update runs its hooks under the update's own sudo authorization, where
+# pkexec would prompt all over again (and polkit with no TTY just hangs). Prefer
+# a sudo that already works, then pkexec for an interactive shell.
+as_root() {
+  if ((EUID == 0)); then "$@"
+  elif sudo -n true 2>/dev/null; then sudo -n "$@"
+  else pkexec "$@" </dev/null
+  fi
+}
 
 echo "==> Locating cmake (not installed system-wide on this box)"
 if command -v cmake >/dev/null; then
@@ -100,7 +108,10 @@ echo "    built: ${NEW_SO:-?}   installed: ${OLD_SO:-?}"
 [[ $NEW_SO == "$OLD_SO" ]] || { echo "    FAIL: SOVERSION mismatch, refusing to install" >&2; exit 1; }
 
 echo "==> Installing over /usr/lib/libaquamarine.so.$PKGVER"
-as_root install -m755 "build/libaquamarine.so.$PKGVER" "/usr/lib/libaquamarine.so.$PKGVER"
+# Absolute: pkexec chdirs to /root, so a relative build/ path does not resolve
+# there and the install fails with "cannot stat" -- exactly when a package
+# upgrade of aquamarine has just restored the buggy .so and this must repair it.
+as_root install -m755 "$BUILDDIR/build/libaquamarine.so.$PKGVER" "/usr/lib/libaquamarine.so.$PKGVER"
 
 echo "==> Restarting the graphical session (needed: the old .so is already mapped)"
 echo "    After it comes back: cat /sys/class/drm/card0-DP-4/enabled   (want: enabled)"
