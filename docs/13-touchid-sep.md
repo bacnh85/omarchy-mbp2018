@@ -89,14 +89,11 @@ memory only:
 | `1` | **no.** NetworkManager may still add one, flagged `noprefixroute` |
 | `0` | yes, immediately: `inet6 fe80::aede:48ff:fe00:1122/64 scope link proto kernel_ll` |
 
-Two caveats, because this is the part most easily over-read:
-
-- With `addr_gen_mode=1` an `noprefixroute` address *can* be present (NetworkManager adds
-  it); whether the bridge accepts one is **untested here** — the two runs that reached the
-  SEP were both on a kernel-generated address, and the run that reported "no IPv6
-  link-local address" had no address on the interface at all. Don't treat a
-  `noprefixroute` address as proof the link is usable.
-- The `1` is not a sysctl you will find written in a file — see the first Gotcha.
+Point worth not over-reading: with `addr_gen_mode=1` the kernel never makes one, so any
+address present is NetworkManager's manual `noprefixroute` one. The bridge **does accept
+that** — proven in the "Fixed on this machine" section below, where the SEP answered with
+NM's address alone. So `addr_gen_mode=1` is not itself a blocker; what blocks is having
+*no* address, which is what a failed activation leaves behind.
 
 The cause is NetworkManager's auto-generated profile, which loses its IPv6 config after
 failing DHCP4:
@@ -110,9 +107,11 @@ device (enp2s0f1u1): Activation: failed for connection 'Wired connection 2'
 
 The T2's bridgeOS never answers DHCP, so the profile (auto-generated, `ipv6.method auto`,
 `autoconnect yes`) times out and leaves the device `disconnected` with no link-local
-address. That profile needs `ipv6.method=link-local`, which is exactly what the
-package's own `t2-touchid.nmconnection` says — but **on Arch that file goes to a path
-NetworkManager never reads**:
+address — and it does that **forever**: `214` activation cycles in a single boot, one
+every 45 s, each ending `ip-config-unavailable`. That profile needs
+`ipv6.method=link-local`, which is exactly what the package's own
+`t2-touchid.nmconnection` says — but **on Arch that file goes to a path NetworkManager
+never reads**:
 
 ```bash
 $ strings -a /usr/bin/NetworkManager | grep system-connections
@@ -125,6 +124,30 @@ file but NM never parses it (and the `/etc` one is not readable as a normal user
 `ls` → `Permission denied`). The package's drop-in `t2-touchid-network-setup.service`
 expects the profile to be present and fails on
 `NetworkManager profile ... was not loaded` otherwise.
+
+### Fixed on this machine (2026-11-17)
+
+The two settings from that unread file were applied to the profile NM actually uses:
+
+```bash
+sudo nmcli connection modify 'Wired connection 2' ipv4.method disabled ipv6.method link-local
+sudo nmcli connection up 'Wired connection 2' ifname enp2s0f1u1
+```
+
+NM persists that as a keyfile at
+`/etc/NetworkManager/system-connections/Wired connection 2.nmconnection` (`root:root`,
+`0600`, written 22:07), so it survives reboots and does not depend on the package.
+
+| | before | after |
+|---|---|---|
+| device state | `connecting` → `failed` every 45 s (`214` cycles/boot) | `connected`, held |
+| activation cycles over 100 s (>2 DHCP timeouts) | climbing | `216 → 216` |
+| SEP reaches the sensor | only with a hand-added address | **yes**, on NM's address alone |
+
+That last row settles a question §2 previously left open: NM sets `addr_gen_mode=1`
+regardless of the profile, so the address NM provides here is a manual
+`noprefixroute` one — and the bridge accepts it. `BiometricKit session open` was
+obtained with no hand-added address on the interface.
 
 ## 3. What is already in place, for when a finger exists
 
@@ -194,8 +217,8 @@ From the `t2-touchid` package README, worth recording once so nobody debugs them
 
 ## Verify
 
-Everything below works without macOS. The first block should print the blocked verdict;
-the second proves the transport trap; the third proves the machine was left as found.
+Everything below works without macOS. The first block prints the blocked verdict; the
+second proves the transport fix; the third proves nothing was installed or left behind.
 
 ```bash
 # 1. Is there an identity to verify against? Needs the package (nothing is installed on
@@ -214,15 +237,16 @@ sudo timeout 20 /tmp/t2tid/usr/bin/t2-touchid --socket /run/t2-touchid/fprint.so
   --uid auto --flags 0 --bind-user none 2>&1 | grep -E 'session open|no macOS user'
 sudo rm -rf /run/t2-touchid
 
-# 2. The transport trap
-cat /proc/sys/net/ipv6/conf/enp2s0f1u1/addr_gen_mode            # 1 = no link-local
-ip -6 addr show dev enp2s0f1u1 | grep -c fe80                   # 0 = absent
-strings -a /usr/bin/NetworkManager | grep system-connections     # /etc/..., never /usr/lib
+# 2. The transport, after the fix above
+nmcli device status | grep enp2s0f1u1                 # connected (held, no flap)
+nmcli -f ipv4.method,ipv6.method connection show 'Wired connection 2'
+                                                      # disabled / link-local
+ip -6 addr show dev enp2s0f1u1 | grep fe80            # noprefixroute is enough
+strings -a /usr/bin/NetworkManager | grep system-connections   # /etc/..., never /usr/lib
 
-# 3. Left as found: NM owns the device, no socket dir, nothing installed
-nmcli device status | grep enp2s0f1u1   # managed; connecting/disconnected as DHCP retries
-ls -d /run/t2-touchid 2>&1 | tail -1    # No such file or directory
-pacman -Q t2-touchid fprintd 2>&1 | tail -2                 # both: not found
+# 3. Nothing was installed, and no socket dir was left behind
+ls -d /run/t2-touchid 2>&1 | tail -1                  # No such file or directory
+pacman -Q t2-touchid fprintd 2>&1 | tail -2           # both: not found
 ```
 
 ## Gotchas
