@@ -34,7 +34,7 @@ installed into `~/.config/omarchy/hooks/`:
 | Hook | When | What it does |
 |---|---|---|
 | `pre-refresh-pacman.d/keep-linux-t2-held.sh` | after `omarchy refresh pacman` rewrites `pacman.conf`, before the transaction | re-applies the `IgnorePkg` hold that the rewrite drops |
-| `post-update.d/verify-mbp-fixes.sh` | end of `omarchy update` | checks all eleven fixes; rebuilds aquamarine when a package upgrade restored the buggy `.so`; repairs a lost `IgnorePkg` |
+| `post-update.d/verify-mbp-fixes.sh` | end of `omarchy update` | one check per doc 01–11 (12 assertions); rebuilds aquamarine when a package upgrade restored the buggy `.so`; repairs a lost `IgnorePkg` |
 
 ```bash
 omarchy hook install pre-refresh-pacman ./scripts/omarchy-hook-hooks/keep-linux-t2-held.sh

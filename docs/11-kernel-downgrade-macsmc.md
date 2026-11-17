@@ -144,6 +144,21 @@ If `IgnorePkg` is ever lost, the post-update hook re-adds it; if this machine is
 rebuilt from scratch, run both `omarchy hook install` lines after
 `fix-battery-charge-limit.sh`.
 
+The hook prints one section per doc (`=== 8. battery charge limit ===`) and counts
+its assertions, so a clean run ends with `all 12 checks passed (docs 01-11)`. When it
+fails it says how many, and why per fix:
+
+```
+=== 8. battery charge limit ===
+  FAIL: no macsmc-battery threshold (generic ACPI battery) — see doc 11
+---
+2 of 12 checks failed — the machine needs attention after this update.
+```
+
+That `FAIL` line is the signature of the downgrade this doc describes: the threshold
+attribute does not exist on the generic ACPI battery, so the charge limit is not
+merely unset, it is unsupported.
+
 ## Alternative: stop using Omarchy's kernel
 
 `IgnorePkg` freezes `linux-t2` at 7.3.4, so Omarchy's kernel fixes stop arriving. The
