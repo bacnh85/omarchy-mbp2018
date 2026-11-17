@@ -2,7 +2,7 @@
 
 Machine: `MBPSori` · MacBookPro15,1 · Apple T2 (iBridge 24.16.6005.0.0) · Omarchy (Arch), kernel `linux-t2`.
 
-Eleven problems were fixed on this box. Each one had a distinct root cause; none were
+Twelve problems were fixed on this box. Each one had a distinct root cause; none were
 "Omarchy bugs" in the usual sense — three were config gaps, one was a genuine installer
 bug, one was a driver claiming hardware it cannot drive on this machine, one was a
 kernel driver leaving a task unfreezable, one was a missing setting, one was a save that
@@ -23,8 +23,14 @@ off, and one was a repository shipping an older kernel under a newer epoch.
 | 9 | `t2fanrd` never starts — "Fan not found" every 2 s, 8800+ restarts a boot | The daemon globs `/sys/devices/pci*/*/*/*/APP0001:00/fan*`, but `macsmc-hwmon` publishes the fans under `.../APP0001:00/macsmc-hwmon/hwmon/hwmon4/`; known upstream gap (T2FanRD #21/#22) | `scripts/fix-fan-daemon.sh` |
 | 10 | Lid close sleeps, lid open does not wake — the power button has to be pressed first | S3 arms only the GPEs a *wakeup-enabled* `_PRW` device claims. The lid rides the **EC's** GPE (`gpe6E`), not LID0's own (`gpe6F`, 0 events), and `EC` was `*disabled`, so that GPE was cleared at S3 entry | `scripts/fix-lid-wake.sh` |
 | 11 | After `omarchy update`, the battery charge limit and fan sensors silently stop existing | Omarchy's repo ships `linux-t2` at `1:7.2.15.arch1-1` (epoch 1) built **without** `CONFIG_MACSMC_*` — 0 of 9 `macsmc` modules. arch-mact2's `7.3.4` has all 9 but no epoch, so `pacman -Syu` treats the older code as the newer package and "upgrades" into it (`vercmp 1:7.2.15 7.3.4` → `1`) | `IgnorePkg` hold + `scripts/omarchy-hook-hooks/` |
+| 12 | Wanted a CPU+dGPU undervolt to cut heat and fan noise | Neither is reachable: MSR 0x150 accepts writes and silently ignores them (post-Plundervolt microcode 0xfa), and the dGPU has no OD node because `PP_OVERDRIVE_MASK` (bit 14) is clear in `ppfeaturemask=0xfff7bfff` — while its 7.1 W idle is leakage, not switching power | Voltage nothing; heat/notch two levers — `powerprofilesctl` (`12.5 W → 9.4 W` idle) and dGPU off (`−7.1 W`) — [12](docs/12-undervolt-heat-fan.md) |
 
 Details: [`docs/`](docs/README.md) · Patches and upstream status: [`patches/`](patches/README.md).
+
+One thing here is **not** fixed, and cannot be from Linux: [Touch ID](docs/13-touchid-sep.md).
+The sensor is reachable and the bridge reaches it — the SEP simply holds no fingerprint this
+install can bind to, and only macOS can enrol one. Needs one macOS boot (finger enrolled)
+before the Linux side is worth configuring.
 
 ## Surviving `omarchy update`
 

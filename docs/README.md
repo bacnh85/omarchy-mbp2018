@@ -14,6 +14,8 @@ to verify it. Read the one matching the symptom.
 - [09 — t2fanrd restarts forever ("Fan not found")](09-fan-daemon.md)
 - [10 — Opening the lid does not wake the machine](10-lid-wake.md)
 - [11 — `omarchy update` downgrades the kernel and takes macsmc with it](11-kernel-downgrade-macsmc.md)
+- [12 — Undervolting CPU/dGPU for less heat and fan noise: what works](12-undervolt-heat-fan.md)
+- [13 — Touch ID: hardware works, but there is no fingerprint to verify](13-touchid-sep.md) (blocked — needs one macOS boot)
 
 ## Machine facts worth knowing before debugging anything
 
