@@ -33,8 +33,8 @@ set -uo pipefail
 REPO=${REPO:-}
 if [[ -z $REPO ]]; then
   here=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-  for c in "$here/../.." "${SUDO_USER:+/home/$SUDO_USER/Work/homelab}" \
-    "$HOME/Work/homelab" /home/bacnh/Work/homelab; do
+  for c in "$here/../.." "$here/../../.." "${SUDO_USER:+/home/$SUDO_USER/Work/omarchy-mbp2018}" \
+    "$HOME/Work/omarchy-mbp2018" "$HOME/omarchy-mbp2018" "$PWD"; do
     [[ -d $c/scripts ]] && { REPO=$(cd -- "$c" && pwd); break; }
   done
 fi
@@ -51,7 +51,7 @@ root() {
   else return 1; fi
 }
 
-[[ -d $S ]] || { echo "homelab scripts not at $S; skipping" >&2; exit 0; }
+[[ -d $S ]] || { echo "no scripts/ next to this checkout ($S); set REPO=/path/to/omarchy-mbp2018" >&2; exit 0; }
 
 # 1 -- keyboard at the LUKS prompt (doc 01)
 echo "=== 1. initramfs keeps the T2 keyboard ==="
